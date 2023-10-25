@@ -28,7 +28,6 @@ final class HomeVC: UIViewController {
     
     private func initalize() {
         homeView.collectionView.delegate = self
-        homeView.collectionView.dataSource = self
         homeView.searchBar.textfield.delegate = self
         
         initTarget()
@@ -41,52 +40,27 @@ final class HomeVC: UIViewController {
                 guard let self else { return }
                 
                 viewModel.clearPageInfo()
-                requestApiFirstStep(text: text)
+                requestApi(text: text)
             })
+            .disposed(by: disposeBag)
+        
+        viewModel.searchDatas
+            .bind(to: homeView.collectionView.rx.items(cellIdentifier: HomeCVCell.identifier, cellType: HomeCVCell.self)) { index, item, cell in
+                self.viewModel.isEnabledPaging = true
+                
+                DispatchQueue.main.async {
+                    cell.imageView.setImage(urlString: item.imageURL)
+                }
+            }
             .disposed(by: disposeBag)
     }
     
-    private func requestApiFirstStep(text: String) {
-        viewModel.requestSearchData(query: text) { [weak self] result in
-            guard let self else { return }
-            
-            viewModel.searchDatas = result.documents
-            homeView.collectionView.reloadData()
-        }
-    }
-    
-    private func requestApiMoreStep(text: String) {
-        viewModel.requestSearchData(query: text) { [weak self] result in
-            guard let self else { return }
-            
-            viewModel.isEnabledPaging = false
-            viewModel.count += 1
-
-            self.viewModel.searchDatas.append(contentsOf: result.documents)
-            DispatchQueue.main.async {
-                self.homeView.collectionView.reloadData()
-                self.viewModel.isEnabledPaging = !result.meta.isEnd
-            }
-        }
+    private func requestApi(text: String) {
+        viewModel.requestSearchDataRx(query: homeView.searchBar.textfield.text ?? "")
     }
 }
 
-extension HomeVC: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return viewModel.searchDatas.count 
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = homeView.collectionView.dequeueReusableCell(withReuseIdentifier: HomeCVCell.identifier, for: indexPath) as? HomeCVCell else { return UICollectionViewCell() }
-        
-        let urlString = viewModel.searchDatas[indexPath.row].imageURL
-        DispatchQueue.main.async {
-            cell.imageView.setImage(urlString: urlString)
-        }
-        
-        return cell
-    }
-    
+extension HomeVC: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let numberOfItemsPerRow: CGFloat = 3
         let spacingBetweenItems: CGFloat = 10
@@ -106,9 +80,10 @@ extension HomeVC : UIScrollViewDelegate {
         let height = scrollView.frame.height
         let isEndPosition = offsetY > (contentHeight - height)
         
-        if isEndPosition && viewModel.isEnabledPaging {
+        if isEndPosition && !viewModel.isEnd && viewModel.isEnabledPaging {
             let text = homeView.searchBar.textfield.text ?? ""
-            requestApiMoreStep(text: text)
+            viewModel.isEnabledPaging = false
+            requestApi(text: text)
         }
     }
 }
