@@ -13,11 +13,8 @@ import RxRelay
 final class HomeViewModel {
     var searchDatas = BehaviorRelay<[Document]>(value: [])
     var count = 1
-    var isEnabledPaging = true {
-        didSet {
-            print("바뀌이이잉ㅁ \(isEnabledPaging)")
-        }
-    }
+    var isEnabledPaging = true
+    
     var isEnd = false
     let disposeBag = DisposeBag()
     
@@ -43,7 +40,7 @@ final class HomeViewModel {
     }
     
     func clearPageInfo() {
-        print("clear..")
+        searchDatas.accept([])
         self.count = 1
         self.isEnabledPaging = true
         self.isEnd = false

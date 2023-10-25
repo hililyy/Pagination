@@ -39,8 +39,11 @@ final class HomeVC: UIViewController {
             .subscribe(onNext: { [weak self] text in
                 guard let self else { return }
                 
-                viewModel.clearPageInfo()
-                requestApi(text: text)
+                self.viewModel.clearPageInfo()
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    self.requestApi(text: text)
+                }
             })
             .disposed(by: disposeBag)
         
